@@ -1,0 +1,104 @@
+W8a Queues (prac7)
+Various queue services in AWS: amazon SQS, Amazon SNS, Amazon MQ, Apache ActiveMQ, RabbitMQ
+Redis [re -dis ]
+
+Terraform for SQS in prac7 (today)
+SQS.tf 
+- setup two queues
+    - standard (doesn't maintain order)
+    - fifo (maintains order; more expensive)
+
+Amazon SQS > Queues > csse6400_prac > Send and receive messages
+Try sending a message after prac "Hello SQS"
+
+service 1, service 2 are two clients in container
+
+Create files?
+.env (see aws details)
+    - Term: xterm-256color
+    - AWS_access_key_id
+    - AWS_secret_access_key 
+    - AWS_session_key 
+    - AWS_session_token 
+sqs.tf 
+
+Basic demo (not todo)
+docker run --rm -it --env-file .env ghcr.io/csse6400/queue:main --name "csse6400_prac.fifo" ...
+Notice the standard queue is not ordered but FIFO is 
+
+Local two container talking with AWS FIFO
+
+terraform destroy 
+
+Demo (todo app)
+- We add new routes
+- Same app we use as publisher and subscriber 
+- Project you have microservices are two different projects 
+
+Worker app end points and local Redis
+$ poetry add psycopg2-binary # for Mac M1, M2, M3
+                             # need to change sumn, ask Zaidul 
+
+$ docker-compose up redis # up redis 
+
+Todo app to listen to redis 
+
+$ docker-compose up --build ... # create calendar item (req received)
+
+todo app published message to redis 
+worker app is running - you must execute this by calling the endpoint 
+redis was running in local 
+
+now we forget redis
+containers will be on sqs, queues will be on sns 
+
+for your project? you run containers on ecs or ec2 
+(YOU WILL NOT RUN ON YOUR LOCAL MACHINE; THIS PRACT IS FOR DEMONSTRATION PURPOSES)
+
+Open two terminals 
+on receiver send the code above the terminal with purple UQ logo 
+make sure you update the credentials
+
+docker run --rm -it --env-file .env ghcr.io/csse6400/queue:main --name "csse6400_prac" --client-name "Client 2"
+
+docker run --rm -it --env-file .env ghcr.io/csse6400/queue:main --name "csse6400_prac.fifo" --client-name "Client 1" --receive
+
+My attempt? ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$ conda install poetry
+
+poetry add celery redis celery[sqs] boto3
+
+# Above cmd doesn't do anything; split it up
+$ poetry add celery 
+$ poetry add redis 
+$ poetry add 'celery[sqs]' # took too long to install
+$ poetry add boto3
+
+$ conda install conda-forge::celery
+> All requested packages already installed 
+
+$ docker-compose up redis 
+
+# Add the below to app:
+#                   environment: 
+$ export CELERY_BROKER_URL=redis://localhost:6379 
+$ export CELERY_RESULT_BACKEND=redis://localhost:6379 
+$ poetry run python3 -m celery --app todo.tasks.ical worker --loglevel=info
+
+# output message slightly different to prac sheet 
+> [2024-04-18 19:36:54,898: INFO/MainProcess] mingle: searching for neighbors
+> [2024-04-18 19:36:55,918: INFO/MainProcess] mingle: all alone
+> [2024-04-18 19:36:55,948: INFO/MainProcess] celery@d-i89-241-193.student.eduroam.uq.edu.au ready.
+
+Add 'worker:...' to docker-compose.yaml file under 'service:...'
+
+To see TaskOverflow (the pretty UI page)
+http://localhost:6400/
+
+P: $ poetry add icalendar
+'HTTPResponse' object has no attribute 'strict'
+A:
+$ conda uninstall poetry
+$ poetry add icalendar
+
+Checkpoint # 

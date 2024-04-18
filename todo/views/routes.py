@@ -3,8 +3,32 @@ from todo.models import db
 from todo.models.todo import Todo 
 from datetime import datetime, timedelta
 
+from celery.result import AsyncResult 
+from todo.tasks import ical 
+
+import icalendar 
+import time 
+
 api = Blueprint('api', __name__, url_prefix='/api/v1') 
 
+def create_ical(tasks): 
+   cal = icalendar.Calendar() 
+   cal.add("prodid", "-//Taskoverflow Calendar//mxm.dk//") 
+   cal.add("version", "2.0") 
+ 
+   time.sleep(50) 
+ 
+   for task in tasks: 
+      event = icalendar.Event() 
+ 
+      event.add("uid", task["id"]) 
+      event.add("summary", task["title"]) 
+      event.add("description", task["description"]) 
+      event.add("dtstart", datetime.datetime.strptime(task["deadline_at"], "%Y-%m-%dT%H:%M:%S")) 
+ 
+      cal.add_component(event) 
+ 
+   return cal.to_ical().decode("utf-8")
 
 @api.route('/health') 
 def health():
@@ -93,4 +117,37 @@ def delete_todo(todo_id):
     db.session.delete(todo) 
     db.session.commit() 
     return jsonify(todo.to_dict()), 200
+
+@api.route('/todos/ical', methods=['POST']) 
+def create_ical(): 
+   todos = Todo.query.order_by(Todo.created_at.desc()).all() 
+   todo_input = [] 
+   for todo in todos: 
+      todo_input.append(todo.to_dict()) 
  
+   task = ical.create_ical.delay(todo_input) 
+ 
+   result = { 
+      'task_id': task.id, 
+      'task_url': f'{request.host_url}api/v1/todos/ical/{task.id}/status' 
+   } 
+ 
+   return jsonify(result), 202 
+ 
+@api.route('/todos/ical/<task_id>/status', methods=['GET']) 
+def get_task(task_id): 
+   task_result = AsyncResult(task_id) 
+   result = { 
+      "task_id": task_id, 
+      "task_status": task_result.status, 
+      "result_url": f'{request.host_url}api/v1/todos/ical/{task_id}/result' 
+   } 
+   return jsonify(result), 200 
+ 
+@api.route('/todos/ical/<task_id>/result', methods=['GET']) 
+def get_calendar(task_id): 
+   task_result = AsyncResult(task_id) 
+   if task_result.status == 'SUCCESS': 
+      return task_result.result, 200, {'Content-Type': 'text/calendar'} 
+   else: 
+      return jsonify({'error': 'Task not finished'}), 404

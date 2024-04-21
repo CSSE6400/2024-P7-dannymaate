@@ -101,4 +101,20 @@ A:
 $ conda uninstall poetry
 $ poetry add icalendar
 
-Checkpoint # 
+Checkpoint # before section 7
+
+Section 7
+P: 
+│ Error: Unsupported argument
+│ 
+│   on main.tf line 35, in resource "aws_db_instance" "taskoverflow_database":
+│   35:  db_name = "todo"
+│ 
+│ An argument named "db_name" is not expected here.
+A: hashicorp/aws version = "~> 5.0" needed
+
+Q: "ECS/EC2 containers will automatically authenticate with your AWS account (so credentials isn’t required)." 
+How does this change my approach?
+A: 
+
+completed this section
